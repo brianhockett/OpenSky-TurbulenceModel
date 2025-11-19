@@ -25,7 +25,6 @@ opensky_params = {
 }
 opensky_clientid = os.getenv("OPENSKY_CLIENTID")
 opensky_clientsecret = os.getenv("OPENSKY_CLIENTSECRET")
-print(opensky_clientid, opensky_clientsecret)
 
 state_vector_keys = [
     "icao24", "callsign", "origin_country", "time_position", "last_contact",
