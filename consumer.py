@@ -97,7 +97,7 @@ def main():
 
                     events_to_insert.append(row_tuple)
 
-                    if len(events_to_insert) >= 50:
+                    if len(events_to_insert) >= 2000:
                         con.executemany(insert_query, events_to_insert)
                         con.commit()
 
