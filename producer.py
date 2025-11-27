@@ -19,11 +19,13 @@ opensky_clientsecret = os.getenv("OPENSKY_CLIENTSECRET")
 
 # OpenSky API URL and Parameters for Sky-box to gather state vectors from
 opensky_api_url = "https://opensky-network.org/api/states/all"
+
+# Bounding Box for Continental US
 opensky_params = {
-    "lamin": "37", # Southern Colorado Border
-    "lomin": "-112", # Western Utah Border
+    "lamin": "24.5", # South US
+    "lomin": "-125", # West US
     "lamax": "49", # US/Canada Border
-    "lomax": "-110" # Central Wyoming
+    "lomax": "-66.9" # East US
 }
 
 # Setting the current access token status at the start of the script
@@ -42,7 +44,7 @@ state_vector_keys = [
 ]
 
 # Number of seconds between polls (Ensures program never exceeds the limit of 4000 API calls per day)
-poll_interval = 22
+poll_interval = 90
 
 # Kafka address
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "127.0.0.1:19092,127.0.0.1:29092,127.0.0.1:39092")
