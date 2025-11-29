@@ -1,4 +1,4 @@
-# Project README
+# Airspace Transition Analysis
 
 ## Overview
 
@@ -110,5 +110,5 @@ See `requirements.txt` for all Python package dependencies.
 
 * Ensure `.env` is configured with all necessary credentials.
 * Make sure Docker and Docker Compose are installed for running Redpanda.
-* Use batch inserts and lazy operations in Polars to improve performance on large datasets.
+
 
