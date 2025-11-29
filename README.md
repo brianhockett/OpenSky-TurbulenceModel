@@ -18,7 +18,7 @@ python producer.py
 
 **Notes:**
 
-* Requires `.env` file with `OPENSKY_CLIENTID`, `OPENSKY_CLIENTSECRET`, and `KAFKA_BROKER`.
+* Requires `.env` file with `OPENSKY_CLIENTID` and `OPENSKY_CLIENTSECRET`.
 * Polls every 90 seconds to stay within API limits.
 
 ### 2. `consumer.py`
@@ -111,3 +111,4 @@ See `requirements.txt` for all Python package dependencies.
 * Ensure `.env` is configured with all necessary credentials.
 * Make sure Docker and Docker Compose are installed for running Redpanda.
 * Use batch inserts and lazy operations in Polars to improve performance on large datasets.
+
