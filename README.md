@@ -1,12 +1,8 @@
 # Airspace Transition Analysis
 
-A comprehensive pipeline for collecting, processing, and visualizing U.S. air traffic data using the OpenSky Network API, Kafka streaming, and interactive web-based visualization.
+A real-time pipeline for collecting, processing, and visualizing U.S. airspace traffic data. This system continuously monitors aircraft movements across 20 defined airspace regions, identifies transitions between them, and provides interactive exploration and static analysis.
 
-## Overview
-
-This project integrates real-time flight state vectors from OpenSky, streams them through a Kafka pipeline, enriches the data with airspace information, and provides both static analysis visualizations and an interactive dashboard. The system tracks aircraft movements across defined airspace regions and analyzes transition patterns.
-
-**Tech Stack:** OpenSky API, Redpanda Kafka, DuckDB, Polars, GeoPandas, Streamlit, Cartopy
+**Tech Stack:** OpenSky Network API, Redpanda Kafka, DuckDB, Polars, GeoPandas, Streamlit, Cartopy
 
 ## Quick Start
 
@@ -20,7 +16,7 @@ This project integrates real-time flight state vectors from OpenSky, streams the
 
 2. **Docker & Docker Compose** (for Redpanda Kafka cluster)
 
-3. **Python 3.8+** with dependencies from `requirements.txt`
+3. **Python** with dependencies from `requirements.txt`
 
 ### Setup
 
@@ -30,7 +26,7 @@ This project integrates real-time flight state vectors from OpenSky, streams the
    ```
    Redpanda Console available at http://localhost:8080
 
-2. Run the pipeline in order:
+2. Run the pipeline in order (each in a separate terminal):
    ```sh
    python producer.py    # Fetch OpenSky data
    python consumer.py    # Stream to DuckDB
@@ -41,73 +37,82 @@ This project integrates real-time flight state vectors from OpenSky, streams the
 
 ## Pipeline Architecture
 
-The system follows a producer-consumer-transformation pattern:
-
 ```
 OpenSky API → Kafka Topic → DuckDB → Enrichment → Analysis/Dashboard
 ```
 
-### Stage 1: Data Production
-**Script:** `producer.py`
+### Stage 1: Data Production (`producer.py`)
 
-Polls the OpenSky API every 90 seconds for live state vectors over the continental U.S. and publishes them to the `airspace-events` Kafka topic.
+Polls the OpenSky API every 90 seconds for live state vectors over the continental U.S. (24.5°N–49°N, 125°W–66.9°W) and publishes them to the `airspace-events` Kafka topic.
 
-- **Rate Limiting:** 90-second polling interval respects API limits
-- **Coverage:** Continental U.S. airspace
+- **Authentication:** OAuth 2.0 client credentials with automatic token refresh
+- **Rate Limiting:** 90-second polling interval respects API limits (~4,000 calls/day)
+- **Partitioning:** Messages keyed by ICAO24 identifier
 
-### Stage 2: Data Consumption
-**Script:** `consumer.py`
+### Stage 2: Data Consumption (`consumer.py`)
 
-Consumes messages from the Kafka topic and persists them to DuckDB in batches.
+Consumes messages from Kafka and persists them to DuckDB in batches.
 
-- **Storage:** Creates `airspace` table automatically
-- **Performance:** Batch inserts of 2,000 records for efficiency
+- **Storage:** Creates `airspace` table automatically with 17 columns (ICAO24, callsign, position, altitude, velocity, etc.)
+- **Performance:** Batch inserts of 2,000 records; graceful shutdown flushes final batch
+- **Primary Key:** `(icao24, last_contact)` prevents duplicates
 
-### Stage 3: Data Enrichment & Transformation
-**Script:** `transform.py`
+### Stage 3: Data Enrichment (`transform.py`)
 
-Enriches flight data with airspace information and calculates aggregate statistics.
+- `consumer.py` script **must be stopped** prior to running `transform.py`. This ensures the transform script can connect to the DuckDB database.
+
+Enriches flight data with U.S. airspace geometries via spatial join and calculates traffic metrics.
+
+- **Airspace Data:** Fetches official 20 Center sectors from ESRI/ArcGIS REST API
+- **Spatial Join:** Assigns each aircraft to airspace region; fills missing as "Outside National Airspace"
+- **Transitions:** Identifies entry/exit events by tracking state changes per aircraft
+- **Calculations:** Per-hour rates for entrances, exits, and events; normalized by airspace area
 
 **Outputs:**
 - `opensky_enriched.parquet` — Flight records with airspace labels
-- `airspace_enriched.parquet` — GeoParquet with airspace geometries and traffic metrics
-- `transitions.parquet` — Flight transitions (entries/exits) by airspace region
+- `airspace_enriched.parquet` — GeoParquet with geometries and traffic metrics
+- `transitions.parquet` — All detected transitions (entries/exits) with timestamps
 
-**Calculations:** Per-hour event rates including entrances, exits, and total activity
+### Stage 4: Static Analysis (`analysis.py`)
 
-### Stage 4: Static Analysis
-**Script:** `analysis.py`
+Generates publication-quality visualizations and saves to `./img/`.
 
-Generates publication-quality visualizations of the enriched data.
+**Outputs:**
+- `Planes_by_Airspace.png` — Latest aircraft colored by assigned airspace region
+- `Cruising_Density.png` — Hexbin heatmap of planes above 10,000 ft altitude
+- `Traffic_Density.png` — Choropleth map showing events per hour per area by region
 
-**Outputs (saved to `./img/`):**
-- Plane positions colored by airspace region
-- Hexbin density map of aircraft positions
-- Traffic rate density by airspace region
+### Stage 5: Interactive Dashboard (`app.py`)
 
-### Stage 5: Interactive Dashboard
-**Script:** `app.py`
-
-Streamlit application for exploring the data interactively.
+Streamlit web application for real-time exploration of airspace transitions.
 
 **Features:**
-- Region-based filtering
-- Interactive transition tables (entries/exits)
-- Map visualization with geographic context
-- Leverages GeoPandas, Cartopy, and Matplotlib for rendering
+- **Airspace Selection:** Sidebar buttons to select any of 20 U.S. Center sectors
+- **Entry/Exit Tables:** Real-time tables of aircraft entering/exiting (last 5 minutes)
+- **Live Map:** Current aircraft positions with color-coded transition status:
+  - Green = entered in last 5 minutes
+  - Red = exited in last 5 minutes
+  - Gray = neither (transiting)
+  - Arrows show heading/true track
+- **Geographic Context:** Airspace boundaries, coastlines, and state borders
+
+Run with: `streamlit run app.py` (available at http://localhost:8501)
 
 ## File Structure
 
 ```
 ├── producer.py              # OpenSky API polling
 ├── consumer.py              # Kafka consumer → DuckDB
-├── transform.py             # Data enrichment
+├── transform.py             # Spatial join & enrichment
 ├── analysis.py              # Static visualizations
 ├── app.py                   # Interactive dashboard
-├── docker-compose.yml       # Redpanda cluster setup
+├── docker-compose.yml       # 3-node Redpanda cluster
 ├── requirements.txt         # Python dependencies
 ├── .env                     # API credentials (not in repo)
-├── img/                     # Analysis output directory
+├── airspace-events.duckdb   # Database file (created at runtime)
+├── *.log                    # Log files per script
+├── img/                     # Analysis output plots
+├── *.parquet                # Enriched data outputs
 └── README.md               # This file
 ```
 
@@ -117,46 +122,38 @@ Streamlit application for exploring the data interactively.
 ```
 OPENSKY_CLIENTID=your_id
 OPENSKY_CLIENTSECRET=your_secret
+KAFKA_BROKER=127.0.0.1:19092,127.0.0.1:29092,127.0.0.1:39092
 ```
 
 ### Docker Services
-The `docker-compose.yml` file sets up:
-- 3-node Redpanda Kafka cluster
-- Redpanda Console UI (http://localhost:8080)
-- Persistent volumes for data
+- **3-node Redpanda Kafka cluster** — High availability (ports 19092, 29092, 39092)
+- **Redpanda Console** — Web UI for monitoring (http://localhost:8080)
+- **Persistent volumes** — Data persists across restarts
+- **Topic:** `airspace-events` with 3 partitions, replication factor 3, infinite retention
 
 ## Dependencies
 
-See `requirements.txt` for complete list. Key packages:
-- `opensky-api` — OpenSky Network integration
-- `redpanda-client` — Kafka producer/consumer
-- `duckdb` — Time-series database
-- `polars` — Data transformation
-- `geopandas` — Geospatial analysis
-- `streamlit` — Web dashboard
-- `cartopy` — Map rendering
+| Package | Purpose |
+|---------|---------|
+| `polars` | Fast DataFrame operations and aggregations |
+| `pandas` | Data manipulation and CSV handling |
+| `geopandas` | Geospatial operations and spatial joins |
+| `shapely` | Geometry objects and geometric operations |
+| `numpy` | Numerical computing and array operations |
+| `matplotlib` | Static plotting and visualization |
+| `cartopy` | Geographic data visualization and map rendering |
+| `streamlit` | Interactive web dashboard framework |
+| `requests` | HTTP client for API calls |
+| `python-dotenv` | Load environment variables from `.env` |
+| `duckdb` | Lightweight SQL database for persistence |
+| `quixstreams` | High-level Kafka producer/consumer API |
 
-## Troubleshooting
-
-**Kafka Connection Issues**
-- Verify Docker containers are running: `docker compose ps`
-- Check logs: `docker compose logs redpanda-0`
-
-**Missing Data in DuckDB**
-- Ensure `producer.py` and `consumer.py` are running
-- Check Redpanda Console for messages in `airspace-events` topic
-
-**OpenSky API Errors**
-- Verify `.env` credentials are correct
-- Check OpenSky API status and rate limits (90-second polling is default)
-
-**Streamlit Dashboard Issues**
-- Ensure all Parquet files exist from `transform.py`
-- Run with `--logger.level=debug` for detailed output
+Install with: `pip install -r requirements.txt`
 
 ## Notes
 
 - All pipeline stages must run in order; downstream scripts depend on upstream outputs
-- The system is designed for continuous operation; `producer.py` and `consumer.py` run indefinitely
+- `producer.py` and `consumer.py` run indefinitely (stop with Ctrl+C)
+- `consumer.py` script must be stopped prior to running `transform.py`. This ensures the transform script can connect to the DuckDB database.
 - Parquet files maintain geospatial attributes for accurate mapping
-- Docker is required for Kafka infrastructure; see `docker-compose.yml` for configuration
+- All scripts log to both console and `.log` files
