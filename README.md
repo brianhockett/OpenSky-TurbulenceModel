@@ -123,7 +123,6 @@ Run with: `streamlit run app.py` (available at http://localhost:8501)
 ```
 OPENSKY_CLIENTID=your_id
 OPENSKY_CLIENTSECRET=your_secret
-KAFKA_BROKER=127.0.0.1:19092,127.0.0.1:29092,127.0.0.1:39092
 ```
 
 ### Docker Services
@@ -158,5 +157,6 @@ Install with: `pip install -r requirements.txt`
 - `consumer.py` script must be stopped prior to running `transform.py`. This ensures the transform script can connect to the DuckDB database.
 - Parquet files maintain geospatial attributes for accurate mapping
 - All scripts log to both console and `.log` files
+
 
 
