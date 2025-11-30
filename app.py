@@ -67,17 +67,17 @@ opensky_df_in_region = opensky_df.filter(
     pl.from_epoch(pl.col("time_position"), time_unit="s").alias("datetime")
 )
 
-# Get most recent time and filter to last 30 minutes
+# Get most recent time and filter to last 5 minutes
 most_recent_time = opensky_df_in_region.select(pl.col("time_position").max()).item()
 cutoff_time = most_recent_time - 300  # 5 minutes prior
 
-# Filter planes to last 30 minutes
+# Filter planes to last 5 minutes
 recent_planes = opensky_df_in_region.filter(
     (pl.col("time_position") >= pl.lit(cutoff_time)) &
     (pl.col("time_position") <= pl.lit(most_recent_time))
 )
 
-# Filter transitions to last 30 minutes
+# Filter transitions to last 5 minutes
 transitions_cutoff = pl.from_epoch(pl.lit(cutoff_time), time_unit="s")
 transitions_in_region = transitions_in_region.filter(
     pl.col("datetime") >= transitions_cutoff
