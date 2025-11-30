@@ -76,7 +76,7 @@ Enriches flight data with U.S. airspace geometries via spatial join and calculat
 
 ### Stage 4: Static Analysis (`analysis.py`)
 
-Generates publication-quality visualizations and saves to `./img/`.
+Generates visualizations and saves to `./img/`.
 
 **Outputs:**
 - `Planes_by_Airspace.png` — Latest aircraft colored by assigned airspace region
@@ -158,4 +158,5 @@ Install with: `pip install -r requirements.txt`
 - `consumer.py` script must be stopped prior to running `transform.py`. This ensures the transform script can connect to the DuckDB database.
 - Parquet files maintain geospatial attributes for accurate mapping
 - All scripts log to both console and `.log` files
+
 
