@@ -1,5 +1,39 @@
 # Airspace Transition Analysis
 
+# FOR GRADING
+
+## ORDER TO RUN FILES IN
+
+### 1.
+```sh
+python producer.py
+```
+
+- Requires local `.env` file with `OPENSKY_CLIENTID` and `OPENSKY_CLIENTSECRET` to access OpenSky API
+
+### 2.
+```sh
+python consumer.py
+```
+
+----------------------------------------------------------------------------
+**DATA MUST EXIST IN `AIRSPACE` TABLE IN DUCKDB TO RUN SCRIPTS 3-5**
+
+### 3.
+```sh
+python transform.py
+```
+
+### 4.
+```sh
+python analysis.py
+```
+
+### 5. (Optional)
+```sh
+streamlit run app.py
+```
+
 ## Overview
 
 This project processes and visualizes air traffic data over the U.S., integrating real-time state vectors from the OpenSky Network, storing them in DuckDB, enriching them with airspace information, and visualizing results using maps. It uses Redpanda for Kafka-based message streaming and Streamlit for interactive visualization.
@@ -110,3 +144,4 @@ See `requirements.txt` for all Python package dependencies.
 
 * Ensure `.env` is configured with all necessary credentials.
 * Make sure Docker and Docker Compose are installed for running Redpanda.
+
