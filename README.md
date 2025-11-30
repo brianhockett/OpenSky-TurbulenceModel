@@ -30,6 +30,7 @@ A real-time pipeline for collecting, processing, and visualizing U.S. airspace t
    ```sh
    python producer.py    # Fetch OpenSky data
    python consumer.py    # Stream to DuckDB
+   # Stop consumer.py prior to running scripts 3-5
    python transform.py   # Enrich & analyze
    python analysis.py    # Generate visualizations
    streamlit run app.py  # Launch dashboard (optional)
@@ -157,3 +158,4 @@ Install with: `pip install -r requirements.txt`
 - `consumer.py` script must be stopped prior to running `transform.py`. This ensures the transform script can connect to the DuckDB database.
 - Parquet files maintain geospatial attributes for accurate mapping
 - All scripts log to both console and `.log` files
+
